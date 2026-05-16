@@ -1,0 +1,6 @@
+# pnpm workspace root
+# All packages under apps/, packages/, and tools/
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "tools/*"

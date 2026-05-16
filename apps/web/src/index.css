@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* ── Bloomberg Terminal Theme Tokens ── */
+@theme {
+  --color-bbg-bg: #0a0e17;
+  --color-bbg-bg-elevated: #111827;
+  --color-bbg-border: #1e293b;
+  --color-bbg-text: #e2e8f0;
+  --color-bbg-text-dim: #94a3b8;
+  --color-bbg-green: #22c55e;
+  --color-bbg-green-dim: #16a34a;
+  --color-bbg-red: #ef4444;
+  --color-bbg-amber: #f59e0b;
+  --color-bbg-blue: #3b82f6;
+  --color-bbg-cyan: #06b6d4;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace;
+}
+
+/* Global base */
+html {
+  background: var(--color-bbg-bg);
+  color: var(--color-bbg-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bbg-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bbg-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bbg-text-dim);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-bbg-blue);
+  color: white;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-bbg-cyan);
+  outline-offset: -1px;
+}
+
+/* Lightweight Charts overrides */
+.lvc-chart-container {
+  background: transparent !important;
+}
