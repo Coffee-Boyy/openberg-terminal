@@ -1,5 +1,7 @@
 """OpenBerg Terminal — FastAPI backend entry point."""
 
+import asyncio
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, List
@@ -31,8 +33,17 @@ async def lifespan(app: FastAPI):
     # Startup — ensure SQLite tables exist
     from app.database import init_db
     init_db()
+
+    # Start background ingestion loop
+    from app.ingestion import run_loop
+    task = asyncio.create_task(run_loop())
     yield
-    # Shutdown (nothing to clean up for SQLite file)
+    # Shutdown — cancel ingestion task
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +258,28 @@ async def get_dividends(ticker: str) -> List[DividendSchema]:
     from app.services.data import DividendService
     raw = DividendService.get_history(ticker.upper())
     return [DividendSchema.model_validate(d) for d in (raw or [])]
+
+
+@app.get(
+    "/api/history/{ticker}",
+    response_model=List[MarketHistorySchema],
+)
+async def get_history(ticker: str, days: int = 30) -> List[MarketHistorySchema]:
+    """Get stored market history from ingestion snapshots."""
+    from app.ingestion import IngestionService
+    from app.models import MarketHistorySchema
+    raw = await IngestionService.history(ticker.upper(), days)
+    return [MarketHistorySchema.model_validate(r) for r in raw]
+
+
+@app.get("/api/latest", response_model=List[MarketHistorySchema])
+async def get_latest(tickers: str = "") -> List[MarketHistorySchema]:
+    """Get latest stored snapshots from ingestion."""
+    from app.ingestion import IngestionService
+    from app.models import MarketHistorySchema
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    raw = await IngestionService.latest(ticker_list)
+    return [MarketHistorySchema.model_validate(r) for r in raw]
 
 
 @app.get(
