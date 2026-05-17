@@ -2,7 +2,7 @@
 
 import math
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from .base import BaseAdapter
@@ -20,8 +20,18 @@ SECURITIES = {
     "V": {"name": "Visa Inc.", "exchange": "NYSE", "sector": "Financials", "industry": "Data Processing Services", "currency": "USD", "marketCap": 520_000_000_000, "peRatio": 31.0, "eps": 8.88, "dividendYield": 0.7, "beta": 0.94, "price": 283.5},
     "WMT": {"name": "Walmart Inc.", "exchange": "NYSE", "sector": "Consumer Staples", "industry": "Discount Stores", "currency": "USD", "marketCap": 480_000_000_000, "peRatio": 29.5, "eps": 6.29, "dividendYield": 1.2, "beta": 0.52, "price": 185.6},
     "SPY": {"name": "SPDR S&P 500 ETF Trust", "exchange": "NYSE Arca", "sector": "Index", "industry": "Broad Market", "currency": "USD", "marketCap": 500_000_000_000, "peRatio": 0, "eps": 0, "dividendYield": 0.85, "beta": 1.0, "price": 520.4},
-    "BTC": {"name": "Bitcoin USD", "exchange": "CRYPTO", "sector": "Crypto", "industry": "Currency", "currency": "USD", "marketCap": 1_900_000_000_000, "peRatio": 0, "eps": 0, "beta": 0, "price": 67_500},
+    "BTC": {"name": "Bitcoin USD", "exchange": "CRYPTO", "sector": "Crypto", "industry": "Currency", "currency": "USD", "peRatio": 0, "eps": 0, "beta": 0, "price": 67_500},
     "EURUSD": {"name": "EUR/USD", "exchange": "FOREX", "sector": "Forex", "industry": "Currency", "currency": "USD", "peRatio": 0, "eps": 0, "beta": 0, "price": 1.085},
+}
+
+# Interval string → timedelta in seconds for generating bar timestamps
+_INTERVAL_SECONDS = {
+    "1m": 60,
+    "5m": 300,
+    "15m": 900,
+    "1h": 3600,
+    "4h": 14400,
+    "1d": 86400,
 }
 
 
@@ -42,10 +52,13 @@ class MockAdapter(BaseAdapter):
 
     def search_securities(self, query: str = "") -> list[dict[str, Any]]:
         if not query:
-            return list(SECURITIES.items())
+            return [
+                {"ticker": ticker, **{"name": info["name"], "exchange": info["exchange"], "sector": info["sector"], "industry": info["industry"], "currency": info["currency"], "type": "equity", "status": "active", "marketCap": info.get("marketCap"), "peRatio": info.get("peRatio"), "beta": info.get("beta")}}
+                for ticker, info in SECURITIES.items()
+            ]
         q = query.lower()
         return [
-            (ticker, info)
+            {"ticker": ticker, **{"name": info["name"], "exchange": info["exchange"], "sector": info["sector"], "industry": info["industry"], "currency": info["currency"], "type": "equity", "status": "active", "marketCap": info.get("marketCap"), "peRatio": info.get("peRatio"), "beta": info.get("beta")}}
             for ticker, info in SECURITIES.items()
             if q in ticker.lower() or q in info["name"].lower()
         ]
@@ -104,7 +117,7 @@ class MockAdapter(BaseAdapter):
                 "changePercent": change_pct,
                 "volume": rng.randint(100_000, 50_000_000),
                 "marketCap": info["marketCap"],
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
         return results
 
@@ -117,14 +130,22 @@ class MockAdapter(BaseAdapter):
         volatility = base * 0.005 if base > 100 else 0.01
         price = base * 0.85
         results = []
-        now = datetime.now()
+
+        # Determine bar granularity from the interval string
+        seconds = _INTERVAL_SECONDS.get(interval, 86400)
+        now = datetime.now(timezone.utc)
+
         for i in range(count):
             change = rng.gauss(0, volatility)
             close = price + change
             high = max(price, close) + rng.uniform(0, volatility)
             low = min(price, close) - rng.uniform(0, volatility)
+
+            # Work backwards from now so the most recent bar is last
+            bar_time = now - timedelta(seconds=seconds * (count - 1 - i))
+
             results.append({
-                "time": (now - timedelta(days=count - i)).isoformat(),
+                "time": bar_time.isoformat(),
                 "open": round(price, 2),
                 "high": round(high, 2),
                 "low": round(low, 2),
@@ -150,10 +171,10 @@ class MockAdapter(BaseAdapter):
             ("Microsoft Cloud Revenue Grows 24%", ["MSFT"], "positive"),
             ("Google Faces EU Antitrust Probe", ["GOOG"], "negative"),
             ("Visa Processes Record Volume", ["V"], "positive"),
-            ("Walmart Expands Same-Day Delivery", ["WMT"], "positive"),
+            ("Walmart Expands Same Day Delivery", ["WMT"], "positive"),
         ]
         results = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         for i, (headline, tickers, sentiment) in enumerate(headlines):
             if ticker and ticker not in tickers:
                 continue
@@ -179,9 +200,10 @@ class MockAdapter(BaseAdapter):
         annual = price * info["dividendYield"]
         quarterly = annual / 4
         results = []
+        now = datetime.now(timezone.utc)
         for i in range(8):
             results.append({
-                "date": (datetime.now() - timedelta(months=3 * (7 - i))).isoformat(),
+                "date": (now - timedelta(days=90 * (7 - i))).isoformat(),
                 "amount": round(quarterly, 4),
             })
         return results

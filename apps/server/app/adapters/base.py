@@ -9,6 +9,27 @@ class AdapterError(Exception):
     pass
 
 
+class APIError(Exception):
+    """Application-level error with HTTP semantics.
+
+    Attributes:
+        status_code — HTTP status code to return (e.g. 400, 404, 502).
+        error_code   — Machine-readable error code (e.g. "NOT_FOUND",
+                       "INVALID_PARAMS", "UPSTREAM_ERROR").
+    """
+
+    def __init__(
+        self,
+        message: str = "",
+        *,
+        status_code: int = 400,
+        error_code: str = "BAD_REQUEST",
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.error_code = error_code
+
+
 class BaseAdapter(ABC):
     """Abstract interface for data provider adapters."""
 
