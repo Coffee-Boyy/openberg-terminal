@@ -48,6 +48,17 @@ def init_db() -> None:
                 created_at  TIMESTAMP DEFAULT (datetime('now')),
                 resolved_at TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS market_history (
+                id              INTEGER PRIMARY KEY,
+                ticker         TEXT NOT NULL,
+                price          REAL NOT NULL,
+                change        REAL,
+                change_percent REAL,
+                volume        INTEGER,
+                timestamp      TIMESTAMP DEFAULT (datetime('now')),
+                UNIQUE(ticker, timestamp)
+            );
         """)
         conn.commit()
     finally:

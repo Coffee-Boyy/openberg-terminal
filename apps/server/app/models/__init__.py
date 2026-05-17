@@ -74,6 +74,17 @@ class DividendSchema(BaseModel):
     amount: Optional[float] = None
 
 
+class MarketHistorySchema(BaseModel):
+    """A stored market snapshot from ingestion."""
+
+    ticker: str
+    price: float
+    change: Optional[float] = None
+    changePercent: Optional[float] = Field(None, alias="changePercent")
+    volume: Optional[int] = None
+    timestamp: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Error / Meta
 # ---------------------------------------------------------------------------
