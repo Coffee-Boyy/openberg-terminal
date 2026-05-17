@@ -1,0 +1,30 @@
+[project]
+name = "openberg-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "alembic>=1.18.4",
+    "asyncpg>=0.31.0",
+    "boto3[s3]>=1.43.9",
+    "fastapi>=0.136.1",
+    "httpx>=0.28.1",
+    "pika>=1.4.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
+    "python-multipart>=0.0.28",
+    "sqlalchemy>=2.0.49",
+    "structlog>=25.5.0",
+    "uvicorn[standard]>=0.47.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=2.1.0",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15.13",
+]

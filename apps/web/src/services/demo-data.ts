@@ -180,7 +180,7 @@ function generateNews(): NewsItem[] {
     id: `news-${i}`,
     headline: item.h,
     summary: '',
-    source: item.i % 3 === 0 ? 'Reuters' : item.i % 2 === 0 ? 'Bloomberg' : 'Bloomberg',
+    source: i % 3 === 0 ? 'Reuters' : i % 2 === 0 ? 'Bloomberg' : 'CNBC',
     published: new Date(now.getTime() - i * 1800_000).toISOString(),
     sentiment: item.sentiment as 'positive' | 'neutral' | 'negative',
     tickers: item.tickers,

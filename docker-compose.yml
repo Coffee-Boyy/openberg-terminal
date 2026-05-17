@@ -1,0 +1,54 @@
+name: openberg
+services:
+  # Frontend
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    environment:
+      - API_URL=http://server:8000
+    profiles:
+      - frontend
+
+  # Backend API
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://openberg:password@db:5432/openberg
+      - REDIS_URL=redis://redis:6379
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY:-}
+      - POLYGON_API_KEY=${POLYGON_API_KEY:-}
+    depends_on:
+      - db
+      - redis
+    profiles:
+      - backend
+
+  # PostgreSQL
+  db:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=openberg
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=openberg
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:

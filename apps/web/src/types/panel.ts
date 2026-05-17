@@ -6,7 +6,8 @@ export type PanelType =
   | 'history'
   | 'alerts'
   | 'watchlist'
-  | 'settings';
+  | 'settings'
+  | 'data';
 
 export interface PanelConfig {
   ticker?: string;
