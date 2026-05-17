@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, List
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, WebSocket, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -170,7 +170,12 @@ class AlertOut(BaseModel):
     response_model=HealthResponse,
 )
 async def health() -> HealthResponse:
-    return HealthResponse(status="ok", version="0.1.0")
+    from app.websocket import get_available_adapters
+    return HealthResponse(
+        status="ok",
+        version="0.1.0",
+        adapters=get_available_adapters(),
+    )
 
 
 @app.get(
@@ -374,3 +379,14 @@ async def remove_alert(alert_id: int):
     if not AlertsService.remove(alert_id):
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
     return None
+
+
+# ---------------------------------------------------------------------------
+# WebSocket — live quotes
+# ---------------------------------------------------------------------------
+
+@app.websocket("/ws/quotes")
+async def websocket_quotes(websocket: WebSocket, tickers: str = ""):
+    """WebSocket endpoint for streaming live quotes."""
+    from app.websocket import ws_quotes
+    await ws_quotes(websocket, tickers)
