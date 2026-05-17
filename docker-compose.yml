@@ -1,54 +1,70 @@
-name: openberg
+# =============================================================================
+# OpenBerg Terminal — Docker Compose
+#
+# PRODUCTION / DEPLOY
+#   docker compose up -d
+#
+# DEVELOPMENT (preferred)
+#   # Terminal 1: server
+#   cd apps/server && OPENBERG_FINNHUB_API_KEY=... uv run uvicorn app.main:app --reload --port 8000
+#   # Terminal 2: web
+#   cd apps/web && pnpm dev
+#
+#   The Vite dev server (port 3000) auto-proxies /api/* to localhost:8000.
+# =============================================================================
+
 services:
-  # Frontend
+  # ---------------------------------------------------------------------------
+  # Server — FastAPI + uvicorn, SQLite-backed.
+  # ---------------------------------------------------------------------------
+  server:
+    build:
+      context: apps/server
+    ports:
+      - "8000:8000"
+    env_file:
+      - apps/server/.env
+    environment:
+      # pydantic-settings uses OPENBERG_ prefix; these override .env values
+      # so secrets can be injected at runtime (e.g. via docker secrets).
+      - OPENBERG_FINNHUB_API_KEY=${FINNHUB_API_KEY:-}
+      - OPENBERG_DATABASE_URL=sqlite:///data/openberg.db
+      - OPENBERG_DATA_PROVIDER=${DATA_PROVIDER:-auto}
+      - OPENBERG_CACHE_QUOTES_TTL=${CACHE_QUOTES_TTL:-10}
+      - OPENBERG_CACHE_PRICES_TTL=${CACHE_PRICES_TTL:-60}
+      - OPENBERG_LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      # Persist SQLite database across container restarts.
+      # Container path /app/data matches the DATABASE_URL above.
+      - server-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # Web — static SPA served by nginx, with /api/* proxied to server.
+  # ---------------------------------------------------------------------------
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
-      - server
-    environment:
-      - API_URL=http://server:8000
-    profiles:
-      - frontend
-
-  # Backend API
-  server:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://openberg:password@db:5432/openberg
-      - REDIS_URL=redis://redis:6379
-      - FINNHUB_API_KEY=${FINNHUB_API_KEY:-}
-      - POLYGON_API_KEY=${POLYGON_API_KEY:-}
-    depends_on:
-      - db
-      - redis
-    profiles:
-      - backend
-
-  # PostgreSQL
-  db:
-    image: postgres:17-alpine
-    environment:
-      - POSTGRES_USER=openberg
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=openberg
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  # Redis
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
-  pgdata:
+  # Persist the SQLite database and any server-side data.
+  server-data:
