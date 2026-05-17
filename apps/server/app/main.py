@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from app.adapters.base import AdapterError, APIError
 from app.models import (
+    MarketHistorySchema,
     DividendSchema,
     ErrorResponse,
     HealthResponse,
